@@ -260,9 +260,9 @@ fix_npm_permissions_linux() {
 }
 
 install_mantis() {
-    local spec="mantis-agent"
+    local spec="@rainworks-llc/mantis-agent"
     if [[ "$MANTIS_VERSION" != "latest" ]]; then
-        spec="mantis-agent@${MANTIS_VERSION}"
+        spec="@rainworks-llc/mantis-agent@${MANTIS_VERSION}"
     fi
 
     if [[ "$DRY_RUN" == "1" ]]; then
@@ -280,12 +280,12 @@ install_mantis() {
 
     if [[ "$VERBOSE" == "1" ]]; then
         if "${cmd[@]}" 2>&1 | tee "$log"; then
-            ui_success "mantis-agent installed"
+            ui_success "Mantis Agent installed"
             return 0
         fi
     else
         if "${cmd[@]}" >"$log" 2>&1; then
-            ui_success "mantis-agent installed"
+            ui_success "Mantis Agent installed"
             return 0
         fi
     fi

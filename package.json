@@ -1,5 +1,5 @@
 {
-    "name": "mantis-agent",
+    "name": "@rainworks-llc/mantis-agent",
     "version": "0.1.0",
     "description": "Autonomous, self-constructing agents backed by Ollama",
     "type": "module",
@@ -10,6 +10,9 @@
         "dist",
         "ui"
     ],
+    "publishConfig": {
+        "access": "public"
+    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/Rainworks-LLC/mantis-agent.git"

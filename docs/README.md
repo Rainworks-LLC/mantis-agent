@@ -50,7 +50,7 @@ mantis doctor
 ### Global install (npm)
 
 ```bash
-npm install -g mantis-agent
+npm install -g @rainworks-llc/mantis-agent
 ```
 
 ### Development mode

@@ -32,7 +32,7 @@ The installer checks for Node.js 20+ and Ollama, installs them if needed, and se
 Or install manually via npm:
 
 ```bash
-npm install -g mantis-agent
+npm install -g @rainworks-llc/mantis-agent
 ```
 
 Or run from source:
