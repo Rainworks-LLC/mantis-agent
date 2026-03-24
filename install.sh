@@ -231,21 +231,50 @@ suggest_pull_model() {
 }
 
 # ─── npm global install ──────────────────────────────────────────────────────
-needs_sudo_for_npm() {
+npm_prefix_is_writable() {
     local npm_prefix
     npm_prefix="$(npm config get prefix 2>/dev/null || echo "/usr/local")"
 
-    # If prefix is under home dir, no sudo needed
+    # If prefix is under home dir, assume writable
     if [[ "$npm_prefix" == "$HOME"* ]]; then
-        return 1
+        return 0
     fi
 
-    # If we can write to node_modules dir, no sudo needed
-    if [[ -w "${npm_prefix}/lib/node_modules" ]] 2>/dev/null; then
-        return 1
+    # Test actual write access (more reliable than -w flag)
+    local test_dir="${npm_prefix}/lib/node_modules"
+    if [[ -d "$test_dir" ]]; then
+        local test_file="${test_dir}/.mantis-write-test-$$"
+        if touch "$test_file" 2>/dev/null; then
+            rm -f "$test_file" 2>/dev/null
+            return 0
+        fi
     fi
 
-    return 0
+    return 1
+}
+
+fix_npm_prefix() {
+    # Reconfigure npm to use a user-writable prefix under $HOME
+    local new_prefix="$HOME/.npm-global"
+    ui_info "Configuring npm to use ${new_prefix} (avoids sudo)"
+    mkdir -p "${new_prefix}"
+    npm config set prefix "${new_prefix}"
+
+    # Persist PATH addition into shell profiles
+    # shellcheck disable=SC2016
+    local path_line='export PATH="$HOME/.npm-global/bin:$PATH"'
+    for rc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+        if [[ -f "$rc" ]] && ! grep -qF ".npm-global" "$rc"; then
+            echo "$path_line" >> "$rc"
+        fi
+    done
+
+    export PATH="${new_prefix}/bin:$PATH"
+    ui_success "npm prefix set to ${new_prefix}"
+}
+
+has_tty() {
+    [[ -t 0 && -t 1 ]]
 }
 
 install_mantis() {
@@ -259,6 +288,31 @@ install_mantis() {
         return 0
     fi
 
+    # If the global npm directory isn't writable, fix it before we start
+    if ! npm_prefix_is_writable; then
+        if has_tty; then
+            # Interactive: offer sudo or prefix fix
+            ui_warn "Global npm directory is not writable"
+            echo ""
+            echo "  1) Fix npm prefix to install under your home directory (recommended)"
+            echo "  2) Use sudo for this install"
+            echo ""
+            local answer
+            read -rp "  Choose [1/2]: " answer
+            case "${answer:-1}" in
+                2)
+                    ui_info "Will install with sudo"
+                    ;;
+                *)
+                    fix_npm_prefix
+                    ;;
+            esac
+        else
+            # Non-interactive (curl | bash): auto-fix prefix
+            fix_npm_prefix
+        fi
+    fi
+
     ui_info "Installing ${spec} globally via npm"
 
     local log
@@ -266,11 +320,10 @@ install_mantis() {
     trap "rm -f '$log'" RETURN
 
     local -a cmd=(npm install -g --no-fund --no-audit "$spec")
-    local use_sudo=false
 
-    if needs_sudo_for_npm; then
-        use_sudo=true
-        ui_info "Global npm directory requires elevated permissions — using sudo"
+    # After potential prefix fix, check again if we still need sudo
+    if ! npm_prefix_is_writable; then
+        ui_info "Using sudo for npm install"
         cmd=(sudo npm install -g --no-fund --no-audit "$spec")
     fi
 
@@ -286,12 +339,26 @@ install_mantis() {
         fi
     fi
 
-    # First attempt failed — if we didn't try sudo, retry with it
-    if [[ "$use_sudo" == "false" ]] && grep -q "EACCES" "$log" 2>/dev/null; then
-        ui_warn "Permission denied — retrying with sudo"
-        if sudo npm install -g --no-fund --no-audit "$spec" >"$log" 2>&1; then
-            ui_success "Mantis Agent installed"
-            return 0
+    # First attempt failed with EACCES — retry with sudo if we haven't already
+    if grep -q "EACCES" "$log" 2>/dev/null; then
+        if has_tty; then
+            ui_warn "Permission denied — retrying with sudo"
+            if sudo npm install -g --no-fund --no-audit "$spec" >"$log" 2>&1; then
+                ui_success "Mantis Agent installed"
+                return 0
+            fi
+        else
+            ui_error "npm install failed — permission denied"
+            echo ""
+            ui_info "The installer is running non-interactively and cannot prompt for sudo."
+            ui_info "Run the installer directly in a terminal instead:"
+            echo -e "  ${DIM}curl -fsSL https://raw.githubusercontent.com/Rainworks-LLC/mantis-agent/main/install.sh | bash -s${NC}"
+            echo ""
+            ui_info "Or install manually with sudo:"
+            echo -e "  ${DIM}sudo npm install -g ${spec}${NC}"
+            echo ""
+            tail -n 20 "$log" >&2
+            return 1
         fi
     fi
 

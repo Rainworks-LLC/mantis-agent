@@ -27,6 +27,12 @@ One-line install (macOS / Linux):
 curl -fsSL https://raw.githubusercontent.com/Rainworks-LLC/mantis-agent/main/install.sh | bash
 ```
 
+One-line install (Windows PowerShell):
+
+```powershell
+powershell -c "iwr -useb https://raw.githubusercontent.com/Rainworks-LLC/mantis-agent/main/install.ps1 | iex"
+```
+
 The installer checks for Node.js 20+ and Ollama, installs them if needed, and sets up the `mantis` CLI globally.
 
 Or install manually via npm:
