@@ -231,32 +231,21 @@ suggest_pull_model() {
 }
 
 # ─── npm global install ──────────────────────────────────────────────────────
-fix_npm_permissions_linux() {
-    if [[ "$OS" != "linux" ]]; then
-        return 0
-    fi
-
+needs_sudo_for_npm() {
     local npm_prefix
     npm_prefix="$(npm config get prefix 2>/dev/null || echo "/usr/local")"
 
-    # If prefix is under home dir, permissions are probably fine
+    # If prefix is under home dir, no sudo needed
     if [[ "$npm_prefix" == "$HOME"* ]]; then
-        return 0
+        return 1
     fi
 
-    # Check if we can write to the npm prefix
+    # If we can write to node_modules dir, no sudo needed
     if [[ -w "${npm_prefix}/lib/node_modules" ]] 2>/dev/null; then
-        return 0
+        return 1
     fi
 
-    ui_info "Configuring npm for global installs without sudo"
-    local npm_dir="${HOME}/.npm-global"
-    mkdir -p "$npm_dir"
-    npm config set prefix "$npm_dir"
-    export PATH="$npm_dir/bin:$PATH"
-
-    # Remind user to add to shell profile
-    ui_info "Add to your shell profile: export PATH=\"${npm_dir}/bin:\$PATH\""
+    return 0
 }
 
 install_mantis() {
@@ -277,6 +266,13 @@ install_mantis() {
     trap "rm -f '$log'" RETURN
 
     local -a cmd=(npm install -g --no-fund --no-audit "$spec")
+    local use_sudo=false
+
+    if needs_sudo_for_npm; then
+        use_sudo=true
+        ui_info "Global npm directory requires elevated permissions — using sudo"
+        cmd=(sudo npm install -g --no-fund --no-audit "$spec")
+    fi
 
     if [[ "$VERBOSE" == "1" ]]; then
         if "${cmd[@]}" 2>&1 | tee "$log"; then
@@ -285,6 +281,15 @@ install_mantis() {
         fi
     else
         if "${cmd[@]}" >"$log" 2>&1; then
+            ui_success "Mantis Agent installed"
+            return 0
+        fi
+    fi
+
+    # First attempt failed — if we didn't try sudo, retry with it
+    if [[ "$use_sudo" == "false" ]] && grep -q "EACCES" "$log" 2>/dev/null; then
+        ui_warn "Permission denied — retrying with sudo"
+        if sudo npm install -g --no-fund --no-audit "$spec" >"$log" 2>&1; then
             ui_success "Mantis Agent installed"
             return 0
         fi
@@ -386,7 +391,6 @@ main() {
     # ── Stage 2: Install ──
     ui_stage "Installing Mantis Agent"
 
-    fix_npm_permissions_linux
     install_mantis
 
     # ── Stage 3: Finalize ──
