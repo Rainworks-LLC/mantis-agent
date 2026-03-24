@@ -330,8 +330,36 @@ function Get-CompletionMessage {
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
+function Show-AutonomyWarning {
+    Write-Host "  Warning: Use at Your Own Risk" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Mantis agents are autonomous. Once created, an agent can:" -ForegroundColor Gray
+    Write-Host "    - Execute shell commands on your machine" -ForegroundColor Gray
+    Write-Host "    - Read and write files in its workspace" -ForegroundColor Gray
+    Write-Host "    - Build and run its own tools" -ForegroundColor Gray
+    Write-Host "    - Fetch URLs from the internet" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  Self-built tool code runs in a sandboxed child process," -ForegroundColor Gray
+    Write-Host "  but built-in tools run with your user permissions." -ForegroundColor Gray
+    Write-Host "  Review the docs before giving an agent access to sensitive data." -ForegroundColor Gray
+    Write-Host ""
+
+    if (-not [Environment]::UserInteractive) {
+        Write-Info "Non-interactive install - proceeding (you accept the above by continuing)"
+        return
+    }
+
+    $answer = Read-Host "  Continue with installation? [Y/n]"
+    if (-not [string]::IsNullOrWhiteSpace($answer) -and $answer -notmatch "^[Yy]") {
+        Write-Host ""
+        Write-Info "Installation cancelled."
+        exit 0
+    }
+}
+
 function Main {
     Write-Banner
+    Show-AutonomyWarning
 
     # Show plan
     Write-Step "Install plan"

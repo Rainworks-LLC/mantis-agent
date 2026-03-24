@@ -420,10 +420,42 @@ pick_completion() {
     echo "${COMPLETIONS[RANDOM % ${#COMPLETIONS[@]}]}"
 }
 
+# ─── Autonomy warning ─────────────────────────────────────────────────────────
+show_autonomy_warning() {
+    echo -e "${YELLOW}${BOLD}  ⚠  Important: Use at Your Own Risk${NC}"
+    echo ""
+    echo -e "  Mantis agents are ${BOLD}autonomous${NC}. Once created, an agent can:"
+    echo "    • Execute shell commands on your machine"
+    echo "    • Read and write files in its workspace"
+    echo "    • Build and run its own tools"
+    echo "    • Fetch URLs from the internet"
+    echo ""
+    echo -e "  Self-built tool code runs in a sandboxed child process,"
+    echo -e "  but ${BOLD}built-in tools run with your user permissions${NC}."
+    echo -e "  Review the docs before giving an agent access to sensitive data."
+    echo ""
+
+    if [[ ! -t 0 || ! -t 1 ]]; then
+        ui_info "Non-interactive install — proceeding (you accept the above by continuing)"
+        return 0
+    fi
+
+    read -rp "  Continue with installation? [Y/n] " answer
+    case "${answer:-y}" in
+        [Yy]*) ;;
+        *)
+            echo ""
+            ui_info "Installation cancelled."
+            exit 0
+            ;;
+    esac
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 main() {
     print_banner
     detect_os
+    show_autonomy_warning
 
     # Show plan
     ui_step "Install plan"

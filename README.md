@@ -12,6 +12,19 @@ Each agent lives in its own workspace with its own personality, memory, and dyna
 - **Local and private** — Everything runs on your hardware through Ollama. No API keys, no cloud, no data leaving your machine.
 - **Web UI included** — Chat with agents in the browser via a built-in Fastify server with WebSocket streaming.
 
+## ⚠️ Use at Your Own Risk
+
+Mantis agents are **autonomous**. Once created, an agent can:
+
+- Execute shell commands on your machine
+- Read and write files in its workspace
+- Build and run its own tools
+- Fetch URLs from the internet
+
+Self-built tool code runs in a sandboxed child process with a timeout, but **built-in tools run with your user permissions**. An agent with `run_shell` can do anything you can do in a terminal.
+
+This is a local-first power tool, not a locked-down sandbox. Review the [workspace brain files](docs/workspace-brain-files.md) and [tool system](docs/tool-system.md) docs before giving an agent access to sensitive data or running it unattended.
+
 ## Quickstart
 
 ### Prerequisites
