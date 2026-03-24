@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mantis Agent</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <h1>🪲 Mantis</h1>
+        <div id="agent-list"></div>
+      </aside>
+      <main id="chat-area" class="empty">
+        <div id="empty-state">
+          <h2>Select an agent to start chatting</h2>
+          <p>Or create one via CLI: <code>mantis create</code></p>
+        </div>
+        <div id="messages"></div>
+        <form id="input-form">
+          <input
+            type="text"
+            id="input"
+            placeholder="Type a message..."
+            autocomplete="off"
+            disabled
+          />
+          <button type="submit" id="send-btn" disabled>Send</button>
+        </form>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
