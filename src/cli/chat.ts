@@ -51,13 +51,21 @@ export async function chatCommand(id: string, _opts: ChatOptions): Promise<void>
   let awaitingFirstToken = false;
   let termRows = process.stdout.rows || 24;
   const promptWidth = 2; // visual width of "❯ "
+  let currentInputRows = 1; // how many rows the input area currently occupies
+
+  /** How many terminal rows the current input buffer needs. */
+  function computeInputRows(): number {
+    const cols = process.stdout.columns || 80;
+    return Math.max(1, Math.ceil((promptWidth + Math.max(inputBuffer.length, 1)) / cols));
+  }
 
   // --- Scroll region layout ---
-  // Terminal split: rows 1..(H-1) scrollable output,
-  // row H = always-visible input prompt.
-  // Cursor always rests on the input row between operations.
+  // Terminal split: rows 1..(H - inputRows) scrollable output,
+  // rows (H - inputRows + 1)..H = always-visible input area.
+  // Cursor always rests on the logical cursor position between operations.
 
   function setupLayout(): void {
+    currentInputRows = 1;
     process.stdout.write("\x1b[2J\x1b[1;1H"); // Clear screen, cursor to top
     process.stdout.write(`\x1b[1;${termRows - 1}r`); // Scroll region: rows 1..(H-1)
     process.stdout.write("\x1b[?7h"); // Enable line wrapping (DECAWM)
@@ -71,16 +79,35 @@ export async function chatCommand(id: string, _opts: ChatOptions): Promise<void>
     process.stdout.write(`\x1b[${termRows};1H\n`);
   }
 
-  /** Always park cursor on the input row after any write. */
+  /** Park cursor at the logical position within the (possibly multi-row) input area. */
   function parkCursor(): void {
-    process.stdout.write(`\x1b[${termRows};${promptWidth + cursorPos + 1}H`);
+    const cols = process.stdout.columns || 80;
+    const inputRows = computeInputRows();
+    const inputStartRow = termRows - inputRows + 1;
+    const offset = promptWidth + cursorPos;
+    const cursorRow = inputStartRow + Math.floor(offset / cols);
+    const cursorCol = (offset % cols) + 1;
+    process.stdout.write(`\x1b[${cursorRow};${cursorCol}H`);
   }
 
-  /** Render the input prompt on the fixed bottom row (always visible). */
+  /** Render the input prompt, expanding to multiple rows as needed. */
   function renderInputLine(): void {
+    const newInputRows = computeInputRows();
+    const inputStartRow = termRows - newInputRows + 1;
+
+    // Update scroll region only when the input height changes
+    if (newInputRows !== currentInputRows) {
+      process.stdout.write(`\x1b[1;${inputStartRow - 1}r`);
+      currentInputRows = newInputRows;
+    }
+
+    // Clear all rows occupied by the input area
+    for (let r = inputStartRow; r <= termRows; r++) {
+      process.stdout.write(`\x1b[${r};1H\x1b[2K`);
+    }
+
     const p = state === "idle" ? chalk.green("❯ ") : chalk.dim("❯ ");
-    process.stdout.write(`\x1b[${termRows};1H\x1b[2K`); // Move to row H, clear it
-    process.stdout.write(`${p}${inputBuffer}`);
+    process.stdout.write(`\x1b[${inputStartRow};1H${p}${inputBuffer}`);
     parkCursor();
   }
 
@@ -326,7 +353,7 @@ export async function chatCommand(id: string, _opts: ChatOptions): Promise<void>
   // Handle terminal resize
   process.stdout.on("resize", () => {
     termRows = process.stdout.rows || 24;
-    process.stdout.write(`\x1b[1;${termRows - 1}r`);
+    currentInputRows = 1; // force scroll region recalc on next render
     renderInputLine();
   });
 

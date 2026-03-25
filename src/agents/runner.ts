@@ -14,6 +14,25 @@ import type { MantisToolDefinition } from "../tools/types.js";
 /** Tool names that create new self-built tools. */
 const TOOL_CREATION_TOOLS = new Set(["create_tool", "create_tool_project"]);
 
+/**
+ * Returns true if the assistant message looks like it's waiting for the user
+ * to respond (e.g. ends with a question, or contains explicit confirmation prompts).
+ * Used to suppress the auto-continue nudge when the agent is mid-conversation.
+ */
+function isAwaitingUserInput(content: string): boolean {
+  const trimmed = content.trimEnd();
+  // Ends with a question mark (possibly followed by emoji/whitespace)
+  if (/\?\s*[\p{Emoji}\s]*$/u.test(trimmed)) return true;
+  // Common confirmation-request phrases
+  if (
+    /\b(let me know|your (call|choice|pick|decision)|what (would you|do you)|shall i|should i|do you want|reply (yes|no)|just (say|tell me)|you (choose|decide))\b/i.test(
+      trimmed,
+    )
+  )
+    return true;
+  return false;
+}
+
 export interface RunnerCallbacks {
   /** Called with each text token as it streams. */
   onToken?: (token: string) => void;
@@ -141,7 +160,11 @@ export class AgentRunner {
 
       // If no tool calls, check whether we should auto-continue
       if (!toolCalls || toolCalls.length === 0) {
-        if (previousRoundHadTools && autoContinues < MAX_AUTO_CONTINUES) {
+        if (
+          previousRoundHadTools &&
+          autoContinues < MAX_AUTO_CONTINUES &&
+          !isAwaitingUserInput(fullContent)
+        ) {
           // The model used tools recently but just responded with text —
           // it may have more work to do. Nudge it to continue.
           autoContinues++;
