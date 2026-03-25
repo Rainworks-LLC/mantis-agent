@@ -1,8 +1,6 @@
 import { Command } from "commander";
-import { createRequire } from "module";
 
-const require = createRequire(import.meta.url);
-const pkg = require("../../package.json") as { version: string };
+declare const __PACKAGE_VERSION__: string;
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -10,7 +8,7 @@ export function buildProgram(): Command {
   program
     .name("mantis")
     .description("Autonomous, self-constructing agents backed by Ollama")
-    .version(pkg.version);
+    .version(__PACKAGE_VERSION__);
 
   // Phase 2: models, config, doctor
   program

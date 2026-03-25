@@ -1,6 +1,6 @@
 {
     "name": "@rainworks-llc/mantis-agent",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "Autonomous, self-constructing agents backed by Ollama",
     "type": "module",
     "bin": {
