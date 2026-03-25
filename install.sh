@@ -440,8 +440,8 @@ show_autonomy_warning() {
         return 0
     fi
 
-    read -rp "  Continue with installation? [Y/n] " answer
-    case "${answer:-y}" in
+    read -rp "  Type 'y' to accept and continue, or press Enter to cancel: " answer
+    case "${answer:-n}" in
         [Yy]*) ;;
         *)
             echo ""

@@ -349,8 +349,8 @@ function Show-AutonomyWarning {
         return
     }
 
-    $answer = Read-Host "  Continue with installation? [Y/n]"
-    if (-not [string]::IsNullOrWhiteSpace($answer) -and $answer -notmatch "^[Yy]") {
+    $answer = Read-Host "  Type 'y' to accept and continue, or press Enter to cancel"
+    if ($answer -notmatch "^[Yy]") {
         Write-Host ""
         Write-Info "Installation cancelled."
         exit 0
