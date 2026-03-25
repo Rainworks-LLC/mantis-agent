@@ -6,7 +6,7 @@ export function buildProgram(): Command {
   program
     .name("mantis")
     .description("Autonomous, self-constructing agents backed by Ollama")
-    .version("0.1.0");
+    .version("0.1.1");
 
   // Phase 2: models, config, doctor
   program
